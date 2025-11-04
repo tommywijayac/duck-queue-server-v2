@@ -2,9 +2,11 @@ package models
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
+	"github.com/beego/beego/v2/core/logs"
 	"github.com/redis/go-redis/v9"
 	"github.com/tommywijayac/duck-queue-server-v2/backend/databases"
 )
@@ -14,12 +16,10 @@ const (
 	streamCallJobWorker string = "call_job_cg"
 )
 
-func NewCallJobStream() error {
-	err := databases.RedisClient.XGroupCreateMkStream(context.Background(), streamCallJob, streamCallJobWorker, "0").Err()
-	if err != nil && err.Error() != "BUSYGROUP Consumer Group name already exists" {
-		return err
-	}
-	return nil
+type CallQueue struct {
+	id     string
+	stream string
+	worker string
 }
 
 type CallJob struct {
@@ -27,23 +27,39 @@ type CallJob struct {
 	ID string
 
 	// call destination
-	RoomName    string // needed?
+	RoomName    string
 	RoomID      string
 	CounterID   string
-	CounterName string // needed?
+	CounterName string
 	QueueNumber string
+
+	CalledAt time.Time
 }
 
-func (job *CallJob) Add() error {
-	var ctx context.Context = context.Background()
+func NewCallQueue(id string) (*CallQueue, error) {
+	stream := fmt.Sprintf("%s_%s", streamCallJob, id)
+	worker := fmt.Sprintf("%s_%s", streamCallJobWorker, id)
 
+	err := databases.RedisClient.XGroupCreateMkStream(context.Background(), stream, worker, "0").Err()
+	if err != nil && err.Error() != "BUSYGROUP Consumer Group name already exists" {
+		return nil, err
+	}
+
+	return &CallQueue{
+		id:     id,
+		stream: stream,
+		worker: worker,
+	}, nil
+}
+
+func (cq *CallQueue) Addjob(ctx context.Context, job *CallJob) error {
 	// perform trimming to maintain size
 	// default stream-node-max-entries is 100, so once entries exceed this limit
 	// subsequent add will trim to max len.
 	// in other words, need to have ~90 pending call jobs before trimming corrupts the job queue.
 	// which should be impossible in this case.
 	return databases.RedisClient.XAdd(ctx, &redis.XAddArgs{
-		Stream: streamCallJob,
+		Stream: cq.stream,
 		ID:     "",
 		MaxLen: 10,
 		Approx: true,
@@ -57,11 +73,11 @@ func (job *CallJob) Add() error {
 	}).Err()
 }
 
-func GetCallJobs(ctx context.Context) ([]CallJob, error) {
+func (cq *CallQueue) GetCallJobs(ctx context.Context) ([]CallJob, error) {
 	entries, err := databases.RedisClient.XReadGroup(ctx, &redis.XReadGroupArgs{
-		Group:    streamCallJobWorker,
+		Group:    cq.worker,
 		Consumer: fmt.Sprintf("%d", time.Now().UnixMilli()),
-		Streams:  []string{streamCallJob, ">"},
+		Streams:  []string{cq.stream, ">"},
 		Count:    1,
 		Block:    0,
 		NoAck:    false,
@@ -98,8 +114,51 @@ func getValues(values map[string]interface{}, key string) string {
 	return vv
 }
 
-func (job *CallJob) Done(ctx context.Context) error {
-	return databases.RedisClient.XAck(ctx, streamCallJob, streamCallJobWorker, job.ID).Err()
+func (cq *CallQueue) Done(ctx context.Context, job *CallJob) error {
+	return databases.RedisClient.XAck(ctx, cq.stream, cq.worker, job.ID).Err()
 }
 
-// histories
+// call logs
+func (cq *CallQueue) Log(ctx context.Context, job *CallJob) error {
+	logKey := getLogKey(job.RoomID)
+
+	jobstr, err := json.Marshal(job)
+	if err != nil {
+		return err
+	}
+
+	return databases.RedisClient.RPush(ctx, logKey, jobstr).Err()
+}
+
+func (cq *CallQueue) ListLogs(ctx context.Context, roomID string, lastN int64) ([]CallJob, error) {
+	logKey := getLogKey(roomID)
+
+	var res *redis.StringSliceCmd
+	if lastN <= 0 {
+		res = databases.RedisClient.LRange(ctx, logKey, 0, -1)
+	} else {
+		res = databases.RedisClient.LRange(ctx, logKey, -lastN, -1)
+	}
+
+	if res.Err() != nil {
+		return nil, res.Err()
+	}
+
+	logsstr := res.Val()
+
+	var jobs []CallJob
+	for _, logstr := range logsstr {
+		var job CallJob
+		if err := json.Unmarshal([]byte(logstr), &job); err != nil {
+			logs.Error("failed to unmarshal call log: %s", err.Error())
+			continue
+		}
+		jobs = append(jobs, job)
+	}
+
+	return jobs, nil
+}
+
+func getLogKey(roomID string) string {
+	return fmt.Sprintf("call_log:%s:%s", roomID, time.Now().Format("20060102"))
+}

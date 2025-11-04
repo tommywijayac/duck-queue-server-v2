@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/beego/beego/v2/core/logs"
 	"github.com/tommywijayac/duck-queue-server-v2/backend/models"
@@ -10,19 +11,25 @@ import (
 
 // Let the CS call the number.. definitely not a pun
 type CallService struct {
+	// right now call job streams only has one worker group, which means limited to one physical speaker
+	// if want to support multiple speakers, need to create multiple job streams
+	callQueue   *models.CallQueue
 	roomService *RoomService
 }
 
 func NewCallService(roomService *RoomService) *CallService {
+	callQueue, err := models.NewCallQueue("default")
+	if err != nil {
+		logs.Critical("fail to create call queue: %s", err.Error())
+		panic(err)
+	}
+
 	cs := &CallService{
+		callQueue:   callQueue,
 		roomService: roomService,
 	}
 
 	// start consumer
-	if err := models.NewCallJobStream(); err != nil {
-		logs.Critical("fail to create call job stream: %s", err.Error())
-		panic(err)
-	}
 	go cs.read()
 
 	return cs
@@ -39,17 +46,25 @@ func (cs *CallService) AddCallJob(ctx context.Context, job models.CallJob) error
 		return errors.New("counter not found in room")
 	}
 
-	return job.Add()
+	// hydrate details so worker can simply use info inside the job
+	job.RoomName = room.Name
+	job.CounterName = room.Counters[job.CounterID].DisplayName
+
+	return cs.callQueue.Addjob(ctx, &job)
 }
 
-func (cs *CallService) doCallJob(ctx context.Context, job models.CallJob) error {
-	// callback room service to handle queue
-	// adjust queue first since it's fast, and to provide visual feedback first
-	if err := cs.roomService.CallQueue(ctx, job.RoomID, job.CounterID, job.QueueNumber); err != nil {
+func (cs *CallService) doCallJob(ctx context.Context, job *models.CallJob) error {
+	// hydrate more details for log
+	// log first so UI can display immediately
+	job.CalledAt = time.Now()
+	if err := cs.callQueue.Log(ctx, job); err != nil {
 		return err
 	}
 
-	// TOOD: integrate with notifier service
+	// TODO: send visual cue to client UI
+	// TODO: send audio cue to speaker device
+	logs.Debug("call job received with details: ", job)
+
 	return nil
 }
 
@@ -57,7 +72,7 @@ func (cs *CallService) read() {
 	for {
 		ctx := context.Background()
 
-		jobs, err := models.GetCallJobs(ctx)
+		jobs, err := cs.callQueue.GetCallJobs(ctx)
 		if err != nil {
 			logs.Critical("fail to get call jobs: %s", err.Error())
 			continue
@@ -71,12 +86,12 @@ func (cs *CallService) read() {
 				continue
 			}
 
-			if err := cs.doCallJob(ctx, job); err != nil {
+			if err := cs.doCallJob(ctx, &job); err != nil {
 				logs.Error("fail to process call job: %s", err.Error())
 				continue
 			}
 
-			if err := job.Done(ctx); err != nil {
+			if err := cs.callQueue.Done(ctx, &job); err != nil {
 				logs.Critical("fail to mark call job as finished: %s", err.Error())
 				continue
 			}

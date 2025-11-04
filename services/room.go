@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"os"
 	"slices"
-	"time"
 
 	"github.com/beego/beego/v2/core/logs"
 	"github.com/beego/beego/v2/server/web"
@@ -87,68 +86,6 @@ func (rs *RoomService) ProcessQueue(ctx context.Context, roomId, originQueue, co
 	}
 
 	return room.ProcessQueue(ctx, originQueue, counterId, queueNumber)
-}
-
-func (rs *RoomService) CallQueue(ctx context.Context, roomId, counterId, queueNumber string) error {
-	room, exists := rs.rooms[roomId]
-	if !exists {
-		return errors.New("room not found")
-	}
-
-	_, exists = room.Counters[counterId]
-	if !exists {
-		return errors.New("counter not found in room")
-	}
-
-	if err := room.CallQueue(ctx, counterId, queueNumber); err != nil {
-		return err
-	}
-
-	/*
-		// audio sent is based on audio template identified by room type
-		// note: quick hack -- ideally add new config field
-		var audioTemplate model.AudioTemplate
-		if info.RoomName == "Registration" {
-			audioTemplate = model.AudioTemplateFrontline
-		} else if info.RoomName == "Pharmacy" {
-			audioTemplate = model.AudioTemplateFrontline
-		}
-
-		// send audio to all registered audio out room:
-		// - room
-		// - main_display that register this room as its member
-		roomOut := []string{info.RoomID}
-		for displayID, cfg := range uc.listGroupConfig {
-			for _, member := range cfg.RoomList {
-				if info.RoomID == member {
-					roomOut = append(roomOut, displayID)
-				}
-			}
-		}
-	*/
-
-	// TODO: play audio on device
-	/*
-		duration, err := uc.rNotifier.SendAudio(ctx, model.NotifierMessage{
-			RoomOut:       roomOut,
-			AudioTemplate: audioTemplate,
-			QueueNumber:   info.Qnum,
-			RoomID:        info.RoomID,
-			CounterID:     info.CounterID,
-		})
-		if err != nil {
-			log.Warnf("fail to call room %s: %s", info.RoomID, err.Error())
-		}
-	*/
-
-	// TODO: send visual and audio to device
-	logs.Info("Calling queue number %s at room %s counter %s", queueNumber, roomId, counterId)
-
-	// wait until audio is done played
-	duration := 5 // TODO: remove, got wait duration from audio duration
-	time.Sleep(time.Duration(duration) * time.Second)
-
-	return nil
 }
 
 func (rs *RoomService) SkipQueue(ctx context.Context, roomId, counterId, queueNumber string) error {
