@@ -1,0 +1,34 @@
+{
+    "REG": {
+        "name": "Dispenser",
+        "actions": [
+            {"action": "create", "destination_ids": ["A","B"]},
+            {"action": "move", "destination_ids": ["A","B"]}
+        ]
+    },
+    "A": {
+        "name": "Registration",
+        "actions": [
+            {"action": "move", "destination_ids": ["FIN"]}
+        ],
+        "counters": {
+             "1": {"name": "Frontline 1"},
+             "2": {"name": "Frontline 2"},
+             "3": {"name": "Frontline 3"}
+        }
+    },
+    "B": {
+        "name": "Pharmacy",
+        "actions": [
+            {"action": "move", "destination_ids": ["FIN"]}
+        ],
+        "counters": {
+            "1": {"name": "Frontline 1"},
+            "2": {"name": "Frontline 2"},
+            "3": {"name": "Frontline 3"}
+        }
+    },
+    "FIN": {
+        "name": "Finish"
+    }
+}
