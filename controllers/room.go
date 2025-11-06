@@ -14,9 +14,10 @@ type RoomController struct {
 }
 
 var (
-	loc         *time.Location
-	RoomService *services.RoomService
-	CallService *services.CallService
+	loc            *time.Location
+	RoomService    *services.RoomService
+	CallService    *services.CallService
+	PrinterService *services.PrinterService
 )
 
 func Init() {
@@ -26,7 +27,8 @@ func Init() {
 		panic(err)
 	}
 
-	RoomService = services.NewRoomService()
+	PrinterService = services.NewPrinterService()
+	RoomService = services.NewRoomService(PrinterService)
 	CallService = services.NewCallService(RoomService)
 }
 

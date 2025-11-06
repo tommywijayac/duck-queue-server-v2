@@ -13,7 +13,9 @@ import (
 type CallService struct {
 	// right now call job streams only has one worker group, which means limited to one physical speaker
 	// if want to support multiple speakers, need to create multiple job streams
-	callQueue   *models.CallQueue
+	callQueue *models.CallQueue
+
+	// dependencies
 	roomService *RoomService
 }
 

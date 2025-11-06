@@ -15,9 +15,12 @@ import (
 
 type RoomService struct {
 	rooms map[string]*models.Room
+
+	// dependencies
+	printerService *PrinterService
 }
 
-func NewRoomService() *RoomService {
+func NewRoomService(printerService *PrinterService) *RoomService {
 	rooms, err := loadRooms()
 	if err != nil {
 		logs.Critical("failed to create room service: failed to load rooms: %s", err.Error())
@@ -26,7 +29,8 @@ func NewRoomService() *RoomService {
 	logs.Info("Room configuration loaded successfully")
 
 	return &RoomService{
-		rooms: rooms,
+		rooms:          rooms,
+		printerService: printerService,
 	}
 }
 
@@ -71,7 +75,18 @@ func (rs *RoomService) CreateQueue(ctx context.Context, sourceRoomId, destRoomId
 		return models.QueueItem{}, fmt.Errorf("'create' action %s to %s is not allowed", sourceRoom.Id, destRoom.Id)
 	}
 
-	return destRoom.CreateQueue(ctx, info)
+	queue, err := destRoom.CreateQueue(ctx, info)
+	if err != nil {
+		return models.QueueItem{}, err
+	}
+
+	// if failed to print, then user would not get their physical queue number
+	// return error even though queue is already created in system
+	if err := rs.printerService.PrintQueue(queue.Number); err != nil {
+		return models.QueueItem{}, err
+	}
+
+	return queue, err
 }
 
 func (rs *RoomService) ProcessQueue(ctx context.Context, roomId, originQueue, counterId, queueNumber string) error {
