@@ -1,4 +1,4 @@
-module github.com/tommywijayac/duck-queue-server-v2/backend
+module github.com/tommywijayac/duck-queue-server-v2
 
 go 1.25.3
 

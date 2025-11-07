@@ -6,9 +6,9 @@ import (
 	"github.com/beego/beego/v2/core/logs"
 	"github.com/beego/beego/v2/server/web"
 
-	"github.com/tommywijayac/duck-queue-server-v2/backend/controllers"
-	"github.com/tommywijayac/duck-queue-server-v2/backend/databases"
-	"github.com/tommywijayac/duck-queue-server-v2/backend/routers"
+	"github.com/tommywijayac/duck-queue-server-v2/controllers"
+	"github.com/tommywijayac/duck-queue-server-v2/databases"
+	"github.com/tommywijayac/duck-queue-server-v2/routers"
 )
 
 func main() {

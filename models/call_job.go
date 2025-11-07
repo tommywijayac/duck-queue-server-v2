@@ -8,7 +8,7 @@ import (
 
 	"github.com/beego/beego/v2/core/logs"
 	"github.com/redis/go-redis/v9"
-	"github.com/tommywijayac/duck-queue-server-v2/backend/databases"
+	"github.com/tommywijayac/duck-queue-server-v2/databases"
 )
 
 const (

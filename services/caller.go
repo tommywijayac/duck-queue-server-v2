@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/beego/beego/v2/core/logs"
-	"github.com/tommywijayac/duck-queue-server-v2/backend/models"
+	"github.com/tommywijayac/duck-queue-server-v2/models"
 )
 
 // Let the CS call the number.. definitely not a pun

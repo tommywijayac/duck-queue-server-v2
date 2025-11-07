@@ -2,7 +2,7 @@ package routers
 
 import (
 	"github.com/beego/beego/v2/server/web"
-	"github.com/tommywijayac/duck-queue-server-v2/backend/controllers"
+	"github.com/tommywijayac/duck-queue-server-v2/controllers"
 )
 
 func Init() {

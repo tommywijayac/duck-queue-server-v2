@@ -3,7 +3,7 @@ package controllers
 import (
 	"time"
 
-	"github.com/tommywijayac/duck-queue-server-v2/backend/services"
+	"github.com/tommywijayac/duck-queue-server-v2/services"
 )
 
 var (

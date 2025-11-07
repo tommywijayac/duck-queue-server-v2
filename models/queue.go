@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/beego/beego/v2/core/logs"
-	"github.com/tommywijayac/duck-queue-server-v2/backend/databases"
+	"github.com/tommywijayac/duck-queue-server-v2/databases"
 )
 
 type Queue struct {

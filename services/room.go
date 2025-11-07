@@ -10,7 +10,7 @@ import (
 
 	"github.com/beego/beego/v2/core/logs"
 	"github.com/beego/beego/v2/server/web"
-	"github.com/tommywijayac/duck-queue-server-v2/backend/models"
+	"github.com/tommywijayac/duck-queue-server-v2/models"
 )
 
 type RoomService struct {
