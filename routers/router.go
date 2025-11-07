@@ -13,6 +13,8 @@ func Init() {
 	web.Router("/api/rooms/:id/move", &controllers.RoomController{}, "post:MoveRoomQueue")
 	web.Router("/api/rooms/:id/call", &controllers.RoomController{}, "post:CallRoomQueue")
 
+	web.Router("/api/rooms/:id/stream", &controllers.RoomController{}, "get:StreamRoomEvents")
+
 	web.Router("/api/dispenser/exit", &controllers.AdminController{}, "post:ExitDispenserApp")
 
 	// Query

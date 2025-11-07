@@ -2,34 +2,13 @@ package controllers
 
 import (
 	"net/http"
-	"time"
 
 	"github.com/beego/beego/v2/server/web"
 	"github.com/tommywijayac/duck-queue-server-v2/backend/models"
-	"github.com/tommywijayac/duck-queue-server-v2/backend/services"
 )
 
 type RoomController struct {
 	web.Controller
-}
-
-var (
-	loc            *time.Location
-	RoomService    *services.RoomService
-	CallService    *services.CallService
-	PrinterService *services.PrinterService
-)
-
-func Init() {
-	var err error
-	loc, err = time.LoadLocation("Asia/Jakarta")
-	if err != nil {
-		panic(err)
-	}
-
-	PrinterService = services.NewPrinterService()
-	RoomService = services.NewRoomService(PrinterService)
-	CallService = services.NewCallService(RoomService)
 }
 
 func (c *RoomController) CreateRoomQueue() {
